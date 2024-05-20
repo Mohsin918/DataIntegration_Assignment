@@ -117,11 +117,9 @@ public class Levenshtein implements SimilarityMeasure {
         int[] upperLine = new int[strings1.length + 1];        // line for regular Levenshtein lookups
         int[] lowerLine = new int[strings1.length + 1];        // line to be filled next by the algorithm
 
-        // Fill the first line with the initial positions (= edits to generate string1 from nothing)
         for (int i = 0; i <= strings1.length; i++)
             upperLine[i] = i;
 
-        // Dynamic programming algorithm for Levenshtein or Damerau-Levenshtein based on withDamerau flag
         if (withDamerau) {
             for (int j = 1; j <= strings2.length; j++) {
                 lowerLine[0] = j;
@@ -132,7 +130,6 @@ public class Levenshtein implements SimilarityMeasure {
                         lowerLine[i] = Math.min(lowerLine[i], upperupperLine[i - 2] + cost);
                     }
                 }
-                // Update the rows for the next iteration
                 int[] temp = upperupperLine;
                 upperupperLine = upperLine;
                 upperLine = lowerLine;
@@ -146,7 +143,6 @@ public class Levenshtein implements SimilarityMeasure {
                     int cost = (strings1[i - 1].equals(strings2[j - 1])) ? 0 : 1;
                     lowerLine[i] = Math.min(upperLine[i] + 1, Math.min(lowerLine[i - 1] + 1, upperLine[i - 1] + cost));
                 }
-                // Update the rows for the next iteration
                 int[] temp = upperLine;
                 upperLine = lowerLine;
                 lowerLine = temp;
