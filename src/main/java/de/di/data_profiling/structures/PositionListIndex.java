@@ -1,5 +1,6 @@
 package de.di.data_profiling.structures;
 
+import de.di.Relation;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -39,9 +40,11 @@ public class PositionListIndex {
     private int[] calculateInverted(List<IntArrayList> clusters, int relationLength) {
         int[] invertedClusters = new int[relationLength];
         Arrays.fill(invertedClusters, -1);
-        for (int clusterIndex = 0; clusterIndex < clusters.size(); clusterIndex++)
-            for (int recordIndex : clusters.get(clusterIndex))
+        for (int clusterIndex = 0; clusterIndex < clusters.size(); clusterIndex++) {
+            for (int recordIndex : clusters.get(clusterIndex)) {
                 invertedClusters[recordIndex] = clusterIndex;
+            }
+        }
         return invertedClusters;
     }
 
@@ -63,16 +66,30 @@ public class PositionListIndex {
     private List<IntArrayList> intersect(List<IntArrayList> clusters, int[] invertedClusters) {
         List<IntArrayList> clustersIntersection = new ArrayList<>();
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                      DATA INTEGRATION ASSIGNMENT                                           //
-        // Calculate the intersection of one PLI's clusters and another PLI's (conveniently already inverted)         //
-        // invertedClusters. The clustersIntersection is a new list that stores the intersection result. Note that    //
-        // the clusters are "Stripped Partitions", which means that only clusters of size >1 are part of the result.  //
+        // Create a map to store temporary clusters for intersection
+        Map<Integer, IntArrayList> tempClusters = new HashMap<>();
 
+        // Iterate over the current clusters
+        for (IntArrayList cluster : clusters) {
+            // Create a map to hold the intersection of this cluster with other clusters
+            Map<Integer, IntArrayList> currentClusterMap = new HashMap<>();
 
+            // For each record in the cluster, check the inverted cluster index in the other PLI
+            for (int recordIndex : cluster) {
+                int otherClusterIndex = invertedClusters[recordIndex];
+                if (otherClusterIndex != -1) {
+                    currentClusterMap.putIfAbsent(otherClusterIndex, new IntArrayList());
+                    currentClusterMap.get(otherClusterIndex).add(recordIndex);
+                }
+            }
 
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // Add all non-trivial intersections to tempClusters
+            for (IntArrayList intersectedCluster : currentClusterMap.values()) {
+                if (intersectedCluster.size() > 1) {
+                    clustersIntersection.add(intersectedCluster);
+                }
+            }
+        }
 
         return clustersIntersection;
     }
