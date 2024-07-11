@@ -11,76 +11,82 @@ import lombok.Data;
 
 import java.util.*;
 
+/**
+ * Implements the Sorted Neighborhood Method for duplicate detection in a dataset.
+ */
 public class SortedNeighborhood {
 
-    // A Record class that stores the values of a record with its original index. This class helps to remember the
-    // original index of a record when this record is being sorted.
+    /**
+     * Internal class to represent a record with its original index.
+     */
     @Data
     @AllArgsConstructor
     private static class Record {
-        private int index;
-        private String[] values;
+        private int originalIndex;
+        private String[] attributeValues;
     }
 
     /**
-     * Discovers all duplicates in the relation by running the Sorted Neighborhood Method once with every sortingKey.
-     * Each run uses one of the specified sortingKeys for the sorting, the windowsSize for the windowing, and
-     * the recordComparator for the similarity calculations. A pair of records is classified as a duplicate and the
-     * corresponding record indexes are returned as a Duplicate object, if the similarity of the two records w.r.t.
-     * the provided recordComparator is equal to or greater than the similarityThreshold.
-     * @param relation The relation, in which duplicates should be detected.
-     * @param sortingKeys The sorting keys that should be used; a sorting key corresponds to an attribute index, whose
-     *                    lexicographical order should determine a sortation; every specificed sorting key korresponds
-     *                    to one Sorted Neighborhood run and the union of all duplicates of all runs is the result of
-     *                    the call.
-     * @param windowSize The window size each Sorted Neighborhood run should use.
-     * @param recordComparator The record comparator each Sorted Neighborhood run should use when comparing records.
-     * @return The list of discovered duplicate pairs of all Sorted Neighborhood runs.
+     * Detects duplicates in the provided relation using the Sorted Neighborhood Method.
+     * The method sorts records based on different sorting keys, slides a window over the sorted records,
+     * and compares records within the window.
+     *
+     * @param relation The relation to search for duplicates.
+     * @param sortingKeys Attribute indices used for sorting.
+     * @param windowSize Size of the window for comparing records.
+     * @param recordComparator Comparator to evaluate record similarity.
+     * @return A set of detected duplicate pairs.
      */
     public Set<Duplicate> detectDuplicates(Relation relation, int[] sortingKeys, int windowSize, RecordComparator recordComparator) {
-        Set<Duplicate> duplicates = new HashSet<>();
+        Set<Duplicate> detectedDuplicates = new HashSet<>();
 
-        Record[] records = new Record[relation.getRecords().length];
-        for (int i = 0; i < relation.getRecords().length; i++)
-            records[i] = new Record(i, relation.getRecords()[i]);
+        // Create an array of records with their original indices
+        Record[] recordsArray = new Record[relation.getRecords().length];
+        for (int i = 0; i < relation.getRecords().length; i++) {
+            recordsArray[i] = new Record(i, relation.getRecords()[i]);
+        }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                      DATA INTEGRATION ASSIGNMENT                                           //
-        // Discover all duplicates in the provided relation. A duplicate stores the attribute indexes that refer to   //
-        // matching records. Use the provided sortingKeys, windowSize, and recordComparator to implement the Sorted   //
-        // Neighborhood Method correctly.                                                                             //
+        // For each sorting key, sort the records and slide the window to find duplicates
+        for (int sortingKey : sortingKeys) {
+            Arrays.sort(recordsArray, Comparator.comparing(record -> record.getAttributeValues()[sortingKey]));
 
+            for (int i = 0; i < recordsArray.length - 1; i++) {
+                for (int j = i + 1; j < Math.min(recordsArray.length, i + windowSize); j++) {
+                    double similarityScore = recordComparator.compare(recordsArray[i].getAttributeValues(), recordsArray[j].getAttributeValues());
+                    if (recordComparator.isDuplicate(similarityScore)) {
+                        detectedDuplicates.add(new Duplicate(recordsArray[i].getOriginalIndex(), recordsArray[j].getOriginalIndex(), similarityScore, relation));
+                    }
+                }
+            }
+        }
 
-
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        return duplicates;
+        return detectedDuplicates;
     }
 
     /**
-     * Suggests a RecordComparator instance based on the provided relation for duplicate detection purposes.
-     * @param relation The relation a RecordComparator needs to be suggested for.
-     * @return A RecordComparator instance for comparing records of the provided relation.
+     * Suggests a RecordComparator configured for the provided relation.
+     *
+     * @param relation The relation for which to suggest a RecordComparator.
+     * @return A configured RecordComparator.
      */
     public static RecordComparator suggestRecordComparatorFor(Relation relation) {
-        List<AttrSimWeight> attrSimWeights = new ArrayList<>(relation.getAttributes().length);
-        double threshold = 0.0;
+        List<AttrSimWeight> similarityWeights = new ArrayList<>();
+        double threshold = 0.5; // Adjust this threshold based on expected similarity
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                      DATA INTEGRATION ASSIGNMENT                                           //
-        // Define the AttrSimWeight objects for a RecordComparator that matches the records of the provided relation  //
-        // possibly well, i.e., duplicate should receive possibly high similarity scores and non-duplicates should    //
-        // receive possibly low scores. In other words, put together a possibly effective ensemble of the already     //
-        // implemented similarity functions for duplicate detections runs on the provided relation. Side note: This   //
-        // is usually learned by machine learning algorithms, but a creative, heuristics-based solution is sufficient //
-        // here.                                                                                                      //
+        // Define similarity measures and weights for each attribute
+        for (int i = 0; i < relation.getAttributes().length; i++) {
+            String attributeName = relation.getAttributes()[i];
+            AttrSimWeight attributeSimilarityWeight;
+            if (attributeName.equalsIgnoreCase("name") || attributeName.equalsIgnoreCase("title")) {
+                attributeSimilarityWeight = new AttrSimWeight(i, new Levenshtein(true), 0.3);
+            } else if (attributeName.equalsIgnoreCase("description")) {
+                attributeSimilarityWeight = new AttrSimWeight(i, new Jaccard(new Tokenizer(2, false), false), 0.2);
+            } else {
+                attributeSimilarityWeight = new AttrSimWeight(i, new Levenshtein(false), 0.1);
+            }
+            similarityWeights.add(attributeSimilarityWeight);
+        }
 
-
-
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        return new RecordComparator(attrSimWeights, threshold);
+        return new RecordComparator(similarityWeights, threshold);
     }
 }

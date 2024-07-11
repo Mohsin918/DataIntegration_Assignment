@@ -46,42 +46,29 @@ public class RecordComparator {
      * @param tuple2 The second tuple for the comparison.
      * @return The similarity of the two tuples w.r.t. the internal similarity measures.
      */
+
     public double compare(String[] tuple1, String[] tuple2) {
-        double recordSimilarity = 0;
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //                                      DATA INTEGRATION ASSIGNMENT                                           //
-        // Compare the two tuples with the similarity functions specified by the internal AttrSimWeight objects.      //
-        // To calculate the overall tuple similarity, calculate the weighted average similarity of all individual     //
-        // attribute similarities; the weights are also stored in the internal AttrSimWeight objects.                 //
-
-        double totalWeight = 0;
+        double overallSimilarity = 0;
+        double totalWeight = 0; // referring to total weight
 
         for (AttrSimWeight attrSimWeight : attrSimWeights) {
-            int attrIndex = attrSimWeight.getAttribute();
+            int attributeIndex = attrSimWeight.getAttribute();
             SimilarityMeasure simMeasure = attrSimWeight.getSimilarityMeasure();
             double weight = attrSimWeight.getWeight();
 
-            // Calculate the similarity for the current attribute
-            double attrSimilarity = simMeasure.calculate(tuple1[attrIndex], tuple2[attrIndex]);
-
-            // Accumulate the weighted similarity
-            recordSimilarity += attrSimilarity * weight;
-
-            // Accumulate the total weight
+            double attributeSimilarity = simMeasure.calculate(tuple1[attributeIndex], tuple2[attributeIndex]);
+            overallSimilarity += attributeSimilarity * weight;
             totalWeight += weight;
         }
 
-        // Normalize the record similarity if total weight is not 1
-        if (totalWeight != 1) {
-            recordSimilarity /= totalWeight;
+        // Normalize the similarity by the total weight (should be 1, but just in case)
+        if (totalWeight != 0) {
+            overallSimilarity /= totalWeight;
         }
 
-        //                                                                                                            //
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        return recordSimilarity;
+        return overallSimilarity;
     }
+
 
     /**
      * Decides if the provided similarity is higher than the internal similarity threshold and, therefore,
