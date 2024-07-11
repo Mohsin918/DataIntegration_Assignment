@@ -55,7 +55,27 @@ public class RecordComparator {
         // To calculate the overall tuple similarity, calculate the weighted average similarity of all individual     //
         // attribute similarities; the weights are also stored in the internal AttrSimWeight objects.                 //
 
+        double totalWeight = 0;
 
+        for (AttrSimWeight attrSimWeight : attrSimWeights) {
+            int attrIndex = attrSimWeight.getAttribute();
+            SimilarityMeasure simMeasure = attrSimWeight.getSimilarityMeasure();
+            double weight = attrSimWeight.getWeight();
+
+            // Calculate the similarity for the current attribute
+            double attrSimilarity = simMeasure.calculate(tuple1[attrIndex], tuple2[attrIndex]);
+
+            // Accumulate the weighted similarity
+            recordSimilarity += attrSimilarity * weight;
+
+            // Accumulate the total weight
+            totalWeight += weight;
+        }
+
+        // Normalize the record similarity if total weight is not 1
+        if (totalWeight != 1) {
+            recordSimilarity /= totalWeight;
+        }
 
         //                                                                                                            //
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
